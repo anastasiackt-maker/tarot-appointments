@@ -1,0 +1,18 @@
+body {
+  font-family: Arial, sans-serif;
+  max-width: 700px;
+  margin: 20px auto;
+}
+
+.step {
+  display: none;
+}
+
+.step.active {
+  display: block;
+}
+
+button {
+  margin-top: 10px;
+  margin-right: 10px;
+}
