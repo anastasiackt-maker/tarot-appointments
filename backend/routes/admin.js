@@ -1,54 +1,53 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
-const { sendMail } = require('../utils/mailer');
+const supabase = require('../db');
+const sendMail = require('../utils/mailer');
 
-// Получить все записи
-router.get('/appointments', (req, res) => {
-  db.all(
-    `SELECT * FROM appointments ORDER BY date ASC, time ASC`,
-    [],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
+// Получить все заявки
+router.get('/appointments', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('appointments')
+            .select('*')
+            .order('created_at', { ascending: false }); // Сортируем по дате создания
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: 'Ошибка получения заявок' });
     }
-  );
 });
 
-// Подтвердить запись
-router.post('/appointments/:id/confirm', (req, res) => {
-  const { id } = req.params;
+// Подтвердить заявку
+router.post('/appointments/:id/confirm', async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Сначала получаем данные заявки, чтобы узнать email клиента
+        const { data: appointmentData, error: getError } = await supabase
+            .from('appointments')
+            .select('email, full_name, date, time')
+            .eq('id', id)
+            .single(); // .single() вернет один объект, а не массив
 
-  db.get(
-    `SELECT * FROM appointments WHERE id = ?`,
-    [id],
-    (err, appt) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (!appt) return res.status(404).json({ error: 'Not found' });
+        if (getError) throw getError;
+        if (!appointmentData) return res.status(404).json({ error: 'Заявка не найдена' });
 
-      db.run(
-        `UPDATE appointments SET status = 'confirmed' WHERE id = ?`,
-        [id],
-        async (err2) => {
-          if (err2) return res.status(500).json({ error: err2.message });
+        // Обновляем статус
+        const { error: updateError } = await supabase
+            .from('appointments')
+            .update({ status: 'confirmed' })
+            .eq('id', id);
 
-          if (appt.email) {
-            try {
-              await sendMail({
-                to: appt.email,
-                subject: 'Подтверждение записи',
-                text: `Ваша запись на гадание подтверждена: ${appt.date} в ${appt.time}`
-              });
-            } catch (e) {
-              console.error(e);
-            }
-          }
+        if (updateError) throw updateError;
+        
+        // Отправляем письмо-подтверждение клиенту
+        const clientMailText = `Здравствуйте, ${appointmentData.full_name}!\n\nВаша запись на гадание ${appointmentData.date} в ${appointmentData.time} подтверждена.\n\nЖду вас!`;
+        sendMail(appointmentData.email, 'Ваша запись на гадание Таро подтверждена', clientMailText);
 
-          res.json({ success: true });
-        }
-      );
+        res.json({ message: 'Заявка подтверждена' });
+    } catch (err) {
+        res.status(500).json({ error: 'Ошибка подтверждения заявки' });
     }
-  );
 });
 
 module.exports = router;

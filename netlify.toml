@@ -1,0 +1,12 @@
+[build]
+  # Папка, где лежат наши HTML, CSS, JS для сайта
+  publish = "frontend"
+  # Папка, где лежат наши бессерверные функции
+  functions = "netlify/functions"
+
+# Правило перенаправления: все запросы, начинающиеся с /api/
+# будут направлены на нашу функцию api.js
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200

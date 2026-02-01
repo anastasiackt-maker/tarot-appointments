@@ -1,120 +1,163 @@
-const apiBase = '/api';
+// Этот код выполняется, только если мы находимся на главной странице (index.html)
+if (document.getElementById('appointment-form')) {
+    
+    // Находим нужные элементы на странице
+    const form = document.getElementById('appointment-form');
+    const dateInput = document.getElementById('date');
+    const timeSelect = document.getElementById('time');
 
-const steps = ['step-1', 'step-2', 'step-3'];
-let currentStep = 0;
+    // Функция для загрузки доступного времени с сервера
+    const loadAvailableTimes = () => {
+        const date = dateInput.value;
+        
+        // Очищаем старые варианты времени
+        timeSelect.innerHTML = '<option value="">-- Выберите время --</option>';
+        if (!date) return;
 
-function showStep(index) {
-  steps.forEach((id, i) => {
-    document.getElementById(id).classList.toggle('active', i === index);
-  });
-  currentStep = index;
+        // Отправляем запрос на наш API, чтобы узнать занятые слоты
+        // Путь '/api/appointments/available-times' будет перенаправлен Netlify на нашу функцию
+        fetch(`/api/appointments/available-times?date=${date}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Сетевая ошибка при загрузке времени');
+                }
+                return response.json();
+            })
+            .then(availableSlots => {
+                if (availableSlots.length === 0) {
+                    const option = new Option('На эту дату всё занято', '', true, true);
+                    option.disabled = true;
+                    timeSelect.add(option);
+                } else {
+                    availableSlots.forEach(slot => {
+                        timeSelect.add(new Option(slot, slot));
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки доступного времени:', error);
+                const option = new Option('Ошибка загрузки', '', true, true);
+                option.disabled = true;
+                timeSelect.add(option);
+            });
+    };
+
+    // Функция для отправки данных формы
+    const handleFormSubmit = (event) => {
+        event.preventDefault(); // Предотвращаем стандартную отправку формы
+
+        // Собираем данные из полей формы
+        const formData = {
+            fullName: document.getElementById('full_name').value,
+            phone: document.getElementById('phone').value,
+            telegram: document.getElementById('telegram_nick').value,
+            email: document.getElementById('email').value,
+            date: dateInput.value,
+            time: timeSelect.value,
+            request: document.getElementById('request').value,
+        };
+
+        // Отправляем данные на наш API
+        fetch('/api/appointments', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(`Ошибка: ${data.error}`);
+            } else {
+                alert('Ваша заявка успешно отправлена! Ожидайте подтверждения по email.');
+                form.reset(); // Очищаем форму
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при отправке заявки:', error);
+            alert('Произошла ошибка при отправке заявки. Попробуйте снова.');
+        });
+    };
+
+    // Навешиваем обработчики событий
+    dateInput.addEventListener('change', loadAvailableTimes);
+    form.addEventListener('submit', handleFormSubmit);
+
+    // Устанавливаем минимальную дату для выбора - сегодня
+    dateInput.min = new Date().toISOString().split("T")[0];
 }
 
-document.getElementById('to-step-2').addEventListener('click', () => {
-  const fullName = document.getElementById('full_name').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  if (!fullName || !phone) {
-    alert('Заполните ФИО и телефон');
-    return;
-  }
-  showStep(1);
-});
 
-document.getElementById('back-to-1').addEventListener('click', () => showStep(0));
-document.getElementById('back-to-2').addEventListener('click', () => showStep(1));
+// Этот код выполняется, только если мы на странице админки (admin.html)
+if (document.getElementById('admin-table')) {
 
-document.getElementById('to-step-3').addEventListener('click', () => {
-  const date = document.getElementById('date').value;
-  const time = document.getElementById('time').value;
-  if (!date || !time) {
-    alert('Выберите дату и время');
-    return;
-  }
-  showStep(2);
-});
+    const tableBody = document.querySelector('#admin-table tbody');
 
-document.getElementById('date').addEventListener('change', loadAvailableTimes);
+    // Функция для загрузки всех заявок
+    const loadAppointments = () => {
+        tableBody.innerHTML = '<tr><td colspan="7">Загрузка заявок...</td></tr>';
 
-function loadAvailableTimes() {
-  const date = document.getElementById('date').value;
-  const timeSelect = document.getElementById('time');
-  timeSelect.innerHTML = '';
+        fetch('/api/admin/appointments')
+            .then(response => response.json())
+            .then(data => {
+                tableBody.innerHTML = ''; // Очищаем таблицу перед заполнением
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                if (data.length === 0) {
+                     tableBody.innerHTML = '<tr><td colspan="7">Новых заявок нет.</td></tr>';
+                } else {
+                    data.forEach(app => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${app.full_name}</td>
+                            <td>${app.phone}<br>${app.email || ''}</td>
+                            <td>${new Date(app.date).toLocaleDateString()} в ${app.time}</td>
+                            <td>${app.detailed_request || 'Нет'}</td>
+                            <td class="${app.status === 'confirmed' ? 'status-confirmed' : ''}">${app.status === 'pending' ? 'Ожидает' : 'Подтверждена'}</td>
+                            <td>
+                                ${app.status === 'pending' ? `<button class="confirm-btn" data-id="${app.id}">Подтвердить</button>` : ''}
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка загрузки заявок:', error);
+                tableBody.innerHTML = `<tr><td colspan="7">Ошибка загрузки заявок: ${error.message}</td></tr>`;
+            });
+    };
 
-  if (!date) return;
-
-  const allTimes = [
-    '10:00', '11:00', '12:00',
-    '13:00', '14:00', '15:00',
-    '16:00', '17:00', '18:00'
-  ];
-
-  fetch(`${apiBase}/appointments/slots?date=${encodeURIComponent(date)}`)
-    .then(res => res.json())
-    .then(data => {
-      const taken = data.takenTimes || [];
-      const available = allTimes.filter(t => !taken.includes(t));
-
-      if (available.length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Нет свободного времени';
-        timeSelect.appendChild(opt);
-        return;
-      }
-
-      available.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        timeSelect.appendChild(opt);
-      });
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Ошибка загрузки времени');
+    // Функция для подтверждения заявки
+    const confirmAppointment = (id) => {
+        fetch(`/api/admin/appointments/${id}/confirm`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Ошибка: ${data.error}`);
+                } else {
+                    alert(data.message);
+                    loadAppointments(); // Перезагружаем список заявок
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка подтверждения:', error);
+                alert('Произошла ошибка при подтверждении.');
+            });
+    };
+    
+    // Обработка кликов на кнопки "Подтвердить"
+    tableBody.addEventListener('click', (event) => {
+        if (event.target.classList.contains('confirm-btn')) {
+            const id = event.target.dataset.id;
+            if (confirm('Вы уверены, что хотите подтвердить эту запись?')) {
+                confirmAppointment(id);
+            }
+        }
     });
+
+    // Загружаем заявки при первой загрузке страницы
+    loadAppointments();
 }
-
-document.getElementById('submit').addEventListener('click', () => {
-  const full_name = document.getElementById('full_name').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const telegram_nick = document.getElementById('telegram_nick').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const date = document.getElementById('date').value;
-  const time = document.getElementById('time').value;
-  const short_request = document.getElementById('short_request').value.trim();
-  const detailed_request = document.getElementById('detailed_request').value.trim();
-
-  if (!full_name || !phone || !date || !time) {
-    alert('Проверьте обязательные поля');
-    return;
-  }
-
-  fetch(`${apiBase}/appointments`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      full_name,
-      phone,
-      telegram_nick,
-      email,
-      date,
-      time,
-      short_request,
-      detailed_request
-    })
-  })
-    .then(res => res.json())
-    .then(data => {
-      const result = document.getElementById('result');
-      if (data.error) {
-        result.textContent = 'Ошибка: ' + data.error;
-      } else {
-        result.textContent = 'Заявка отправлена. Ожидайте подтверждения.';
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Ошибка отправки');
-    });
-});

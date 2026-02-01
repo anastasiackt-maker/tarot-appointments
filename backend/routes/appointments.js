@@ -1,87 +1,61 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../db');
-const { sendMail } = require('../utils/mailer');
+const supabase = require('../db'); // Теперь это клиент Supabase
+const sendMail = require('../utils/mailer');
 
-// Получить занятые слоты на дату
-router.get('/slots', (req, res) => {
-  const { date } = req.query;
-  if (!date) return res.status(400).json({ error: 'date is required' });
-
-  db.all(
-    `SELECT time FROM appointments WHERE date = ?`,
-    [date],
-    (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      const takenTimes = rows.map(r => r.time);
-      res.json({ takenTimes });
+// Получение доступного времени
+router.get('/available-times', async (req, res) => {
+    const { date } = req.query;
+    if (!date) {
+        return res.status(400).json({ error: 'Дата не указана' });
     }
-  );
+
+    const allSlots = ['10:00', '12:00', '14:00', '16:00', '18:00'];
+    
+    try {
+        const { data, error } = await supabase
+            .from('appointments')
+            .select('time')
+            .eq('date', date);
+
+        if (error) throw error;
+
+        const bookedSlots = data.map(slot => slot.time);
+        const availableSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
+        res.json(availableSlots);
+    } catch (err) {
+        res.status(500).json({ error: 'Ошибка получения времени' });
+    }
 });
 
-// Создать новую запись
-router.post('/', (req, res) => {
-  const {
-    full_name,
-    phone,
-    telegram_nick,
-    date,
-    time,
-    short_request,
-    detailed_request,
-    email
-  } = req.body;
+// Создание новой записи
+router.post('/', async (req, res) => {
+    const { fullName, phone, telegram, email, date, time, request } = req.body;
+    
+    try {
+        const { data, error } = await supabase
+            .from('appointments')
+            .insert([{ 
+                full_name: fullName, 
+                phone, 
+                telegram_nick: telegram, 
+                email, 
+                date, 
+                time, 
+                detailed_request: request 
+            }])
+            .select();
 
-  if (!full_name || !phone || !date || !time) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
+        if (error) throw error;
 
-  // Проверяем, не занят ли уже слот
-  db.get(
-    `SELECT id FROM appointments WHERE date = ? AND time = ?`,
-    [date, time],
-    (err, row) => {
-      if (err) return res.status(500).json({ error: err.message });
-      if (row) {
-        return res.status(409).json({ error: 'Slot already taken' });
-      }
+        // Отправка уведомления админу
+        const adminMailText = `Новая заявка на гадание!\n\nКлиент: ${fullName}\nТелефон: ${phone}\nДата: ${date}\nВремя: ${time}\nEmail: ${email}`;
+        sendMail(process.env.ADMIN_EMAIL, 'Новая заявка на сайте', adminMailText);
 
-      db.run(
-        `
-        INSERT INTO appointments (
-          full_name, phone, telegram_nick, date, time,
-          short_request, detailed_request, email, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-        `,
-        [
-          full_name,
-          phone,
-          telegram_nick,
-          date,
-          time,
-          short_request,
-          detailed_request,
-          email || null
-        ],
-        function (err) {
-          if (err) return res.status(500).json({ error: err.message });
-
-          const appointmentId = this.lastID;
-
-          // Уведомление админу
-          if (process.env.ADMIN_EMAIL) {
-            sendMail({
-              to: process.env.ADMIN_EMAIL,
-              subject: 'Новая запись на гадание',
-              text: `Новая запись #${appointmentId} от ${full_name} на ${date} ${time}`
-            }).catch(console.error);
-          }
-
-          res.json({ success: true, id: appointmentId });
-        }
-      );
+        res.status(201).json({ message: 'Заявка успешно отправлена!', data: data[0] });
+    } catch (err) {
+        res.status(500).json({ error: 'Ошибка при создании заявки' });
     }
-  );
 });
 
 module.exports = router;
