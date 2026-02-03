@@ -2,6 +2,8 @@
 
 # Настройки сборки
 [build]
+  # ПРЯМАЯ КОМАНДА: Зайти в папку с функциями и выполнить npm install
+  command = "cd netlify/functions && npm install"
   # Папка, которую нужно опубликовать (наш frontend)
   publish = "frontend"
   # Папка, где лежат бессерверные функции
@@ -13,7 +15,4 @@
   to = "/.netlify/functions/api/:splat"
   status = 200
 
-# ВАЖНЫЙ НОВЫЙ БЛОК
-# Этот плагин автоматически устанавливает зависимости для функций
-[[plugins]]
-  package = "@netlify/plugin-functions-install-core"
+# Мы удалили блок [[plugins]], так как он не помог
