@@ -1,28 +1,19 @@
 {
-  "name": "backend",
+  "name": "tarot-appointments-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Backend for Tarot Appointments",
+  "main": "api.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node api.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@supabase/supabase-js": "^2.93.3",
-    "body-parser": "^2.2.2",
-    "cors": "^2.8.6",
-    "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "mongoose": "^9.1.5",
-    "nodemailer": "^7.0.12",
-    "serverless-http": "^4.0.0",
-    "sqlite3": "^5.1.7"
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.7",
+    "serverless-http": "^3.2.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.11"
-  }
+  "author": "",
+  "license": "ISC"
 }
