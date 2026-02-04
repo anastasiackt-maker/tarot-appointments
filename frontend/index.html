@@ -8,48 +8,50 @@
 <body>
   <h1>Запись на гадание</h1>
 
-  <div id="step-1" class="step active">
-    <h2>Шаг 1: Ваши данные</h2>
-    <label>ФИО:<br>
-      <input type="text" id="full_name" required>
-    </label><br>
-    <label>Телефон:<br>
-      <input type="text" id="phone" required>
-    </label><br>
-    <label>Ник в Telegram:<br>
-      <input type="text" id="telegram_nick">
-    </label><br>
-    <label>Email (для подтверждения):<br>
-      <input type="email" id="email">
-    </label><br>
-    <button type="button" id="to-step-2">Далее</button>
-  </div>
+  <form id="appointment-form">
+    
+    <div id="step-1" class="step active">
+      <h2>Шаг 1: Ваши данные</h2>
+      <label>ФИО:<br>
+        <input type="text" id="full_name" required>
+      </label><br>
+      <label>Телефон:<br>
+        <input type="text" id="phone" required>
+      </label><br>
+      <label>Ник в Telegram:<br>
+        <input type="text" id="telegram_nick">
+      </label><br>
+      <label>Email (для подтверждения):<br>
+        <input type="email" id="email">
+      </label><br>
+      <button type="button" id="to-step-2">Далее</button>
+    </div>
 
-  <div id="step-2" class="step">
-    <h2>Шаг 2: Выбор даты и времени</h2>
-    <label>Дата:<br>
-      <input type="date" id="date" required>
-    </label><br>
-    <label>Время:<br>
-      <select id="time"></select>
-    </label><br>
-    <button type="button" id="back-to-1">Назад</button>
-    <button type="button" id="to-step-3">Далее</button>
+    <div id="step-2" class="step">
+      <h2>Шаг 2: Выбор даты и времени</h2>
+      <label>Дата:<br>
+        <input type="date" id="date" required>
+      </label><br>
+      <label>Время:<br>
+        <select id="time"></select>
+      </label><br>
+      <button type="button" id="back-to-1">Назад</button>
+      <button type="button" id="to-step-3">Далее</button>
+    </div>
 
-  </div>
+    <div id="step-3" class="step">
+      <h2>Шаг 3: Запрос</h2>
+      <label>Запрос на гадание (кратко):<br>
+        <input type="text" id="short_request">
+      </label><br>
+      <label>Описание вопроса и ключевые факторы:<br>
+        <textarea id="detailed_request" rows="5"></textarea>
+      </label><br>
+      <button type="button" id="back-to-2">Назад</button>
+      <button type="submit" id="submit">Отправить</button>
+    </div>
 
-  <div id="step-3" class="step">
-    <h2>Шаг 3: Запрос</h2>
-    <label>Запрос на гадание (кратко):<br>
-      <input type="text" id="short_request">
-    </label><br>
-    <label>Описание вопроса и ключевые факторы:<br>
-      <textarea id="detailed_request" rows="5"></textarea>
-    </label><br>
-    <button type="button" id="back-to-2">Назад</button>
-    <button type="submit" id="submit">Отправить</button>
-
-  </div>
+  </form>
 
   <div id="result"></div>
 
