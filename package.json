@@ -1,10 +1,9 @@
 {
-  "name": "tarot-appointments-backend",
+  "name": "tarot-appointments",
   "version": "1.0.0",
-  "description": "Backend for Tarot Appointments",
-  "main": "api.js",
+  "description": "Tarot appointments site with Netlify Functions",
   "scripts": {
-    "start": "node api.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
