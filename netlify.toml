@@ -1,18 +1,10 @@
 # Этот файл — инструкция для Netlify
 
-# Настройки сборки
 [build]
-  # ПРЯМАЯ КОМАНДА: Зайти в папку с функциями и выполнить npm install
-  command = "cd netlify/functions && npm install"
-  # Папка, которую нужно опубликовать (наш frontend)
   publish = "frontend"
-  # Папка, где лежат бессерверные функции
   functions = "netlify/functions"
 
-# Правило переадресации для API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
-
-# Мы удалили блок [[plugins]], так как он не помог
